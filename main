@@ -1,144 +1,89 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local Camera = workspace.CurrentCamera
-local LocalPlayer = Players.LocalPlayer
-local Drawings = {}
-local Settings = {Aimbot=false,SilentAim=false,ESP=false,TeamCheck=true,FOV=150,Smooth=0.15,AimPart="Head",SilentChance=100,ShowNames=true,ShowBoxes=true,ShowHealth=true,ShowTracers=false}
+-- Repo Lite - Aimbot + ESP | UI Nativa Estilo Rayfield
+local Players=game:GetService("Players")local RunService=game:GetService("RunService")local UserInputService=game:GetService("UserInputService")local Camera=workspace.CurrentCamera
+local LP=Players.LocalPlayer
+local Drawings={}
+local S={Aim=false,ESP=false,Team=true,FOV=150,Smooth=0.15,AimPart="Head",ShowNames=true,ShowBoxes=true,ShowHealth=true,ShowTracers=false}
 
-local Window = Rayfield:CreateWindow({Name="Lite",LoadingTitle="...",LoadingSubtitle="",ConfigurationSaving={Enabled=false}})
-local TabAim = Window:CreateTab("Aimbot", 4483362458)
-local TabEsp = Window:CreateTab("ESP", 4483362458)
+-- UI
+local SG=Instance.new("ScreenGui",LP:WaitForChild("PlayerGui"))SG.Name="Lite"SG.ResetOnSpawn=false
+local Main=Instance.new("Frame",SG)Main.Size=UDim2.new(0,260,0,320)Main.Position=UDim2.new(0,40,0.5,-160)Main.BackgroundColor3=Color3.fromRGB(22,22,28)Main.BorderSizePixel=0 Main.Active=true Main.Draggable=true Instance.new("UICorner",Main).CornerRadius=UDim.new(0,8)
+Instance.new("UIGradient",Main).Color=ColorSequence.new(Color3.fromRGB(22,22,28),Color3.fromRGB(28,28,36))
+local Title=Instance.new("TextLabel",Main)Title.Size=UDim2.new(1,0,0,32)Title.BackgroundColor3=Color3.fromRGB(30,30,38)Title.Text="  Lite Hub"Title.TextColor3=Color3.fromRGB(255,255,255)Title.TextSize=14 Title.Font=Enum.Font.GothamBold Title.TextXAlignment=Enum.TextXAlignment.Left Instance.new("UICorner",Title).CornerRadius=UDim.new(0,8)
+local TBar=Instance.new("Frame",Main)TBar.Size=UDim2.new(1,0,0,28)TBar.Position=UDim2.new(0,0,0,32)TBar.BackgroundTransparency=1
+local Pg,Tab={},{}
+local function Nt(n,i)
+    local B=Instance.new("TextButton",TBar)B.Size=UDim2.new(0.5,0,1,0)B.Position=UDim2.new((i-1)*0.5,0,0,0)B.BackgroundColor3=Color3.fromRGB(35,35,45)B.Text=n B.TextColor3=Color3.fromRGB(180,180,180)B.TextSize=12 B.Font=Enum.Font.Gotham B.BorderSizePixel=0 B.AutoButtonColor=false
+    local P=Instance.new("ScrollingFrame",Main)P.Size=UDim2.new(1,-16,1,-68)P.Position=UDim2.new(0,8,0,64)P.BackgroundTransparency=1 P.ScrollBarThickness=2 P.AutomaticCanvasSize=Enum.AutomaticSize.Y P.Visible=i==1
+    Instance.new("UIListLayout",P).Padding=UDim.new(0,6)
+    Tab[n]=B Pg[n]=P
+    B.MouseButton1Click:Connect(function()for _,v in pairs(Pg)do v.Visible=false end for _,v in pairs(Tab)do v.BackgroundColor3=Color3.fromRGB(35,35,45)v.TextColor3=Color3.fromRGB(180,180,180)end P.Visible=true B.BackgroundColor3=Color3.fromRGB(50,50,65)B.TextColor3=Color3.fromRGB(255,255,255)end)
+    return P
+end
+local Aim=Nt("Aim",1) local Esp=Nt("ESP",2)
+Tab["Aim"].BackgroundColor3=Color3.fromRGB(50,50,65)Tab["Aim"].TextColor3=Color3.fromRGB(255,255,255)
 
-TabAim:CreateToggle({Name="Aimbot",CurrentValue=false,Flag="Aim",Callback=function(v)Settings.Aimbot=v end})
-TabAim:CreateToggle({Name="Silent Aim",CurrentValue=false,Flag="Sil",Callback=function(v)Settings.SilentAim=v end})
-TabAim:CreateToggle({Name="Team Check",CurrentValue=true,Flag="Team",Callback=function(v)Settings.TeamCheck=v end})
-TabAim:CreateSlider({Name="FOV",Range={10,500},Increment=1,Suffix="px",CurrentValue=150,Flag="Fov",Callback=function(v)Settings.FOV=v end})
-TabAim:CreateSlider({Name="Smoothness",Range={1,100},Increment=1,Suffix="%",CurrentValue=15,Flag="Sm",Callback=function(v)Settings.Smooth=v/100 end})
-TabAim:CreateSlider({Name="Silent Hit %",Range={1,100},Increment=1,Suffix="%",CurrentValue=100,Flag="Hit",Callback=function(v)Settings.SilentChance=v end})
-TabAim:CreateDropdown({Name="Target Part",Options={"Head","HumanoidRootPart","UpperTorso"},CurrentOption="Head",Flag="Part",Callback=function(v)Settings.AimPart=v end})
+local function Tg(p,t,d,c) -- toggle
+    local B=Instance.new("TextButton",p)B.Size=UDim2.new(1,0,0,30)B.BackgroundColor3=d and Color3.fromRGB(0,160,80)or Color3.fromRGB(40,40,50)B.Text=t..": "..(d and"ON"or"OFF")B.TextColor3=Color3.new(1,1,1)B.TextSize=12 B.Font=Enum.Font.Gotham B.AutoButtonColor=false Instance.new("UICorner",B).CornerRadius=UDim.new(0,6)
+    local s=d B.MouseButton1Click:Connect(function()s=not s B.BackgroundColor3=s and Color3.fromRGB(0,160,80)or Color3.fromRGB(40,40,50)B.Text=t..": "..(s and"ON"or"OFF")c(s)end)end
+local function Sl(p,t,mi,ma,d,suf,c) -- slider
+    local H=Instance.new("Frame",p)H.Size=UDim2.new(1,0,0,44)H.BackgroundTransparency=1
+    local L=Instance.new("TextLabel",H)L.Size=UDim2.new(1,0,0,16)L.BackgroundTransparency=1 L.Text=t..": "..d..suf L.TextColor3=Color3.new(1,1,1)L.TextSize=12 L.Font=Enum.Font.Gotham L.TextXAlignment=Enum.TextXAlignment.Left
+    local Tr=Instance.new("Frame",H)Tr.Size=UDim2.new(1,0,0,6)Tr.Position=UDim2.new(0,0,0,22)Tr.BackgroundColor3=Color3.fromRGB(40,40,50)Tr.BorderSizePixel=0 Instance.new("UICorner",Tr).CornerRadius=UDim.new(1,0)
+    local F=Instance.new("Frame",Tr)F.Size=UDim2.new((d-mi)/(ma-mi),0,1,0)F.BackgroundColor3=Color3.fromRGB(0,150,255)F.BorderSizePixel=0 Instance.new("UICorner",F).CornerRadius=UDim.new(1,0)
+    local D=false
+    local function u(i)local po=math.clamp((i.Position.X-Tr.AbsolutePosition.X)/Tr.AbsoluteSize.X,0,1)local v=math.floor(mi+po*(ma-mi))F.Size=UDim2.new(po,0,1,0)L.Text=t..": "..v..suf c(v)end
+    Tr.InputBegan:Connect(function(i)if i.UserInputType==Enum.UserInputType.MouseButton1 then D=true u(i)end end)UserInputService.InputEnded:Connect(function(i)if i.UserInputType==Enum.UserInputType.MouseButton1 then D=false end end)UserInputService.InputChanged:Connect(function(i)if D and i.UserInputType==Enum.UserInputType.MouseMovement then u(i)end end)end
 
-TabEsp:CreateToggle({Name="ESP",CurrentValue=false,Flag="Esp",Callback=function(v)Settings.ESP=v end})
-TabEsp:CreateToggle({Name="Team Check",CurrentValue=true,Flag="EspTeam",Callback=function(v)Settings.TeamCheck=v end})
-TabEsp:CreateToggle({Name="Names",CurrentValue=true,Flag="Names",Callback=function(v)Settings.ShowNames=v end})
-TabEsp:CreateToggle({Name="Boxes",CurrentValue=true,Flag="Boxes",Callback=function(v)Settings.ShowBoxes=v end})
-TabEsp:CreateToggle({Name="Health",CurrentValue=true,Flag="Health",Callback=function(v)Settings.ShowHealth=v end})
-TabEsp:CreateToggle({Name="Tracers",CurrentValue=false,Flag="Tracers",Callback=function(v)Settings.ShowTracers=v end})
+Tg(Aim,"Aimbot",false,function(v)S.Aim=v end)
+Tg(Aim,"Team Check",true,function(v)S.Team=v end)
+Sl(Aim,"FOV",10,400,150,"px",function(v)S.FOV=v end)
+Sl(Aim,"Smooth",1,100,15,"%",function(v)S.Smooth=v/100 end)
+Tg(Esp,"ESP",false,function(v)S.ESP=v end)
+Tg(Esp,"Team Check",true,function(v)S.Team=v end)
+Tg(Esp,"Names",true,function(v)S.ShowNames=v end)
+Tg(Esp,"Boxes",true,function(v)S.ShowBoxes=v end)
+Tg(Esp,"Health",true,function(v)S.ShowHealth=v end)
+Tg(Esp,"Tracers",false,function(v)S.ShowTracers=v end)
 
-local function IsAlive(p)
-    local c=p.Character local h=c and c:FindFirstChildOfClass("Humanoid")
-    return c and h and h.Health>0
+UserInputService.InputBegan:Connect(function(i,g)if not g and i.KeyCode==Enum.KeyCode.RightControl then Main.Visible=not Main.Visible end end)
+
+-- Logic
+local function Alive(p)local c=p.Character local h=c and c:FindFirstChildOfClass("Humanoid")return c and h and h.Health>0 end
+local function Teammate(p)if not S.Team then return false end if p.Team and LP.Team then return p.Team==LP.Team end return false end
+local function Part(p,n)local c=p.Character return c and c:FindFirstChild(n)end
+local function Closest()
+    local m=UserInputService:GetMouseLocation()local b,d=nil,S.FOV
+    for _,p in ipairs(Players:GetPlayers())do if p~=LP and Alive(p)and not Teammate(p)then local a=Part(p,S.AimPart)if a then local v,o=Camera:WorldToViewportPoint(a.Position)if o then local di=(Vector2.new(v.X,v.Y)-m).Magnitude if di<d then d=di b=p end end end end end
+    return b
 end
-local function IsTeammate(p)
-    if not Settings.TeamCheck then return false end
-    if p.Team and LocalPlayer.Team then return p.Team==LocalPlayer.Team end
-    return false
+local function GetD(p)
+    if Drawings[p]then return Drawings[p]end local e={}
+    e.B=Drawing.new("Square")e.B.Thickness=1 e.B.Filled=false e.B.Color=Color3.new(1,0,0)e.B.Visible=false
+    e.O=Drawing.new("Square")e.O.Thickness=3 e.O.Filled=false e.O.Color=Color3.new(0,0,0)e.O.Visible=false
+    e.N=Drawing.new("Text")e.N.Size=13 e.N.Center=true e.N.Outline=true e.N.Color=Color3.new(1,1,1)e.N.Visible=false e.N.Font=Drawing.Fonts.UI
+    e.H=Drawing.new("Text")e.H.Size=12 e.H.Center=true e.H.Outline=true e.H.Color=Color3.new(0,1,0)e.H.Visible=false e.H.Font=Drawing.Fonts.UI
+    e.T=Drawing.new("Line")e.T.Thickness=1 e.T.Color=Color3.new(1,0,0)e.T.Visible=false
+    Drawings[p]=e return e
 end
-local function GetPart(p,name)
-    local c=p.Character return c and c:FindFirstChild(name)
-end
-local function GetClosest()
-    local mouse=UserInputService:GetMouseLocation()
-    local best,dist=nil,Settings.FOV
-    for _,p in ipairs(Players:GetPlayers()) do
-        if p~=LocalPlayer and IsAlive(p) and not IsTeammate(p) then
-            local part=GetPart(p,Settings.AimPart)
-            if part then
-                local pos,onScreen=Camera:WorldToViewportPoint(part.Position)
-                if onScreen then
-                    local d=(Vector2.new(pos.X,pos.Y)-mouse).Magnitude
-                    if d<dist then dist=d best=p end
-                end
-            end
-        end
-    end
-    return best
-end
-local function GetESP(p)
-    if Drawings[p] then return Drawings[p] end
-    local d={}
-    d.Box=Drawing.new("Square") d.Box.Thickness=1 d.Box.Filled=false d.Box.Color=Color3.new(1,0,0) d.Box.Visible=false
-    d.BoxOutline=Drawing.new("Square") d.BoxOutline.Thickness=3 d.BoxOutline.Filled=false d.BoxOutline.Color=Color3.new(0,0,0) d.BoxOutline.Visible=false
-    d.Name=Drawing.new("Text") d.Name.Size=13 d.Name.Center=true d.Name.Outline=true d.Name.Color=Color3.new(1,1,1) d.Name.Visible=false d.Name.Font=Drawing.Fonts.UI
-    d.Health=Drawing.new("Text") d.Health.Size=12 d.Health.Center=true d.Health.Outline=true d.Health.Color=Color3.new(0,1,0) d.Health.Visible=false d.Health.Font=Drawing.Fonts.UI
-    d.Tracer=Drawing.new("Line") d.Tracer.Thickness=1 d.Tracer.Color=Color3.new(1,0,0) d.Tracer.Visible=false
-    Drawings[p]=d return d
-end
-local function Clean(p)
-    local d=Drawings[p]
-    if d then for _,v in pairs(d) do pcall(function()v:Remove()end) end Drawings[p]=nil end
-end
+local function Clean(p)local e=Drawings[p]if e then for _,v in pairs(e)do pcall(function()v:Remove()end)end Drawings[p]=nil end end
 Players.PlayerRemoving:Connect(Clean)
 
-local SilentHooked=false
-local function HookSilent()
-    if SilentHooked then return end
-    SilentHooked=true
-    local mt=getrawmetatable(game)
-    local old=mt.__namecall
-    setreadonly(mt,false)
-    mt.__namecall=newcclosure(function(self,...)
-        local method=getnamecallmethod()
-        local args={...}
-        if Settings.SilentAim and math.random(1,100)<=Settings.SilentChance then
-            if method=="FindPartOnRay" or method=="FindPartOnRayWithIgnoreList" or method=="FindPartOnRayWithWhitelist" or method=="Raycast" then
-                local target=GetClosest()
-                if target then
-                    local part=GetPart(target,Settings.AimPart)
-                    if part then
-                        if method=="Raycast" and typeof(args[1])=="Vector3" then
-                            args[2]=(part.Position-args[1]).Unit*5000
-                        elseif method~="Raycast" and typeof(args[1])=="Ray" then
-                            args[1]=Ray.new(args[1].Origin,(part.Position-args[1].Origin).Unit*5000)
-                        end
-                    end
-                end
-            end
-        end
-        return old(self,unpack(args))
-    end)
-    setreadonly(mt,true)
-end
-
 RunService.RenderStepped:Connect(function()
-    for _,p in ipairs(Players:GetPlayers()) do
-        if p~=LocalPlayer then
-            local d=GetESP(p)
-            local c=p.Character
-            local hum=c and c:FindFirstChildOfClass("Humanoid")
-            local head=c and c:FindFirstChild("Head")
-            local hrp=c and c:FindFirstChild("HumanoidRootPart")
-            if not Settings.ESP or not c or not hum or not head or not hrp or hum.Health<=0 or IsTeammate(p) then
-                d.Box.Visible=false d.BoxOutline.Visible=false d.Name.Visible=false d.Health.Visible=false d.Tracer.Visible=false
-                continue
-            end
-            local top,vis1=Camera:WorldToViewportPoint(head.Position+Vector3.new(0,0.5,0))
-            local bot,vis2=Camera:WorldToViewportPoint(hrp.Position-Vector3.new(0,3,0))
-            if not vis1 and not vis2 then
-                d.Box.Visible=false d.BoxOutline.Visible=false d.Name.Visible=false d.Health.Visible=false d.Tracer.Visible=false
-                continue
-            end
-            local h=math.abs(bot.Y-top.Y)
-            local w=h*0.55
-            local pos=Vector2.new(top.X-w/2,top.Y)
-            d.Box.Size=Vector2.new(w,h) d.Box.Position=pos d.Box.Visible=Settings.ShowBoxes~=false
-            d.BoxOutline.Size=Vector2.new(w,h) d.BoxOutline.Position=pos d.BoxOutline.Visible=Settings.ShowBoxes~=false
-            d.Name.Text=p.Name d.Name.Position=Vector2.new(top.X,top.Y-18) d.Name.Visible=Settings.ShowNames~=false
-            d.Health.Text=math.floor(hum.Health).." HP" d.Health.Position=Vector2.new(top.X,top.Y-32) d.Health.Visible=Settings.ShowHealth~=false
-            d.Tracer.From=Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y) d.Tracer.To=Vector2.new(bot.X,bot.Y) d.Tracer.Visible=Settings.ShowTracers==true
+    for _,p in ipairs(Players:GetPlayers())do if p~=LP then
+        local e=GetD(p)local c=p.Character local hum=c and c:FindFirstChildOfClass("Humanoid")local h=c and c:FindFirstChild("Head")local r=c and c:FindFirstChild("HumanoidRootPart")
+        if not S.ESP or not c or not hum or not h or not r or hum.Health<=0 or Teammate(p)then
+            e.B.Visible=false e.O.Visible=false e.N.Visible=false e.H.Visible=false e.T.Visible=false continue
         end
+        local a,v1=Camera:WorldToViewportPoint(h.Position+Vector3.new(0,0.5,0))local b,v2=Camera:WorldToViewportPoint(r.Position-Vector3.new(0,3,0))
+        if not v1 and not v2 then e.B.Visible=false e.O.Visible=false e.N.Visible=false e.H.Visible=false e.T.Visible=false continue end
+        local he=math.abs(b.Y-a.Y)local w=he*0.55 local pos=Vector2.new(a.X-w/2,a.Y)
+        e.B.Size=Vector2.new(w,he)e.B.Position=pos e.B.Visible=S.ShowBoxes e.O.Size=Vector2.new(w,he)e.O.Position=pos e.O.Visible=S.ShowBoxes
+        e.N.Text=p.Name e.N.Position=Vector2.new(a.X,a.Y-18)e.N.Visible=S.ShowNames
+        e.H.Text=math.floor(hum.Health).." HP" e.H.Position=Vector2.new(a.X,a.Y-32)e.H.Visible=S.ShowHealth
+        e.T.From=Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y)e.T.To=Vector2.new(b.X,b.Y)e.T.Visible=S.ShowTracers
+    end end
+    if S.Aim and UserInputService:IsKeyDown(Enum.KeyCode.Q)then
+        local t=Closest()if t then local a=Part(t,S.AimPart)if a then local cf=CFrame.new(Camera.CFrame.Position,a.Position)Camera.CFrame=Camera.CFrame:Lerp(cf,math.clamp(S.Smooth,0.01,0.99))end end
     end
-    if Settings.Aimbot and UserInputService:IsKeyDown(Enum.KeyCode.Q) then
-        local target=GetClosest()
-        if target then
-            local part=GetPart(target,Settings.AimPart)
-            if part then
-                local cf=CFrame.new(Camera.CFrame.Position,part.Position)
-                Camera.CFrame=Camera.CFrame:Lerp(cf,math.clamp(Settings.Smooth,0.01,0.99))
-            end
-        end
-    end
-    if Settings.SilentAim and not SilentHooked then HookSilent() end
 end)
 
